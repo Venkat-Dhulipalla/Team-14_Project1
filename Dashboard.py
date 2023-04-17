@@ -8,7 +8,7 @@ import plotly.express as px
 DATA_URL = "https://www.dropbox.com/s/7uyen8z14lhnxf7/US-Accidents%5BEdited%5D.csv?dl=1"
 
 # Create a title for the dashboard
-st.header("United States of America Motor Vehicle Collisions dashboard")
+st.header("United States of America🇺🇸 Motor Vehicle Collisions dashboard")
 
 # Add a description for the dashboard
 st.write("This dashboard provides insights into motor vehicle collisions in the United States 🇺🇸.")
@@ -38,7 +38,60 @@ injured = st.slider("People affected by injuries in vehicle collisions", 0, 19)
 st.map(data.query("injured_persons >= @injured")
        [["latitude", "longitude"]].dropna(how="any"))
 
-# Section 4: Top cities with highest rate of collisions
+
+# Section 2: Collisions by hour and minute
+st.header(
+    "What is the frequency of collisions during specific time periods of the day?")
+
+# Create a selectbox input for selecting an hour range
+hour = st.selectbox("Select an hour range", range(24))
+
+# Filter the data based on the selected hour
+data = data[data["date/time"].dt.hour == hour]
+
+# Calculate the midpoint of latitude and longitude for initial view state of the map
+midpoint = (np.average(data["latitude"]), np.average(data["longitude"]))
+
+# Display the hour range in the markdown
+st.markdown("Vehicle collision between %i:00 and %i:00" %
+            (hour, (hour+1) % 24))
+
+# Create a plot visualization
+st.write(pdk.Deck(
+    map_style="mapbox://styles/mapbox/dark-v11",
+    initial_view_state=pdk.ViewState(
+        latitude=32.993213,
+        longitude=-96.94766,
+        zoom=11,
+        pitch=50,
+    ),
+    layers=[
+        pdk.Layer(
+            'ScatterplotLayer',
+            data=data[['latitude', 'longitude']],
+            get_position=['longitude', 'latitude'],
+            get_color='[255, 0, 0, 200]',
+            get_radius=100,
+            pickable=True,
+        )
+    ],
+))
+
+st.subheader("Analysis of Collisions by Minute during %i:00 to %i:00" %
+             (hour, (hour+1) % 24))
+filtered = data[
+    (data["date/time"].dt.hour >= hour)
+    &
+    (data["date/time"].dt.hour < (hour+1))
+]
+hist = np.histogram(filtered["date/time"].dt.minute, bins=60, range=(0, 60))[0]
+chart_data = pd.DataFrame({'Minutes': range(60), 'Number of Crashes': hist})
+fig = px.bar(chart_data, x='Minutes', y="Number of Crashes",
+             hover_data=["Minutes", "Number of Crashes"], height=380)
+st.write(fig)
+
+
+# Section 3: Top cities with highest rate of collisions
 st.header("Identifying the top 10 cities in the United States with the highest rate of collisions")
 
 # Create a selectbox input for selecting the affected people type (Pedestrians, Cyclists, Motorists)
